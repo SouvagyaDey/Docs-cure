@@ -1,0 +1,10 @@
+.venv/
+db.sqlite3
+mysqlmigration.py
+__pycache__/
+*.pyc
+sqlite_backup.json
+.env
+detailedsumm.md
+dump_sqlite.py
+data_backup.json

@@ -1,0 +1,328 @@
+### Register a new user
+POST http://127.0.0.1:8000/api/auth/signup/
+Content-Type: application/json
+
+{
+    "email": "user1@gmail.com",
+    "password": "sg123456"
+}
+### Login with token cookies
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+    "email": "user1@gmail.com",
+    "password": "sg123456"
+}
+### Login with token cookies
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+    "email": "user6@gmail.com",
+    "password": "sg123456"
+}
+### Login with token cookies
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+    "email": "admin@gmail.com",
+    "password": "1234"
+}
+
+### Login with token cookies
+POST http://127.0.0.1:8000/api/auth/login/
+Content-Type: application/json
+
+{
+    "email": "user1@gmail.com",
+    "password": "sg123456"
+}
+
+### Refresh token (uses cookies)
+POST http://127.0.0.1:8000/api/auth/token-refresh/
+Content-Type: application/json
+
+### Check authentication status
+POST http://127.0.0.1:8000/api/auth/isauthenticated/
+Content-Type: application/json
+
+### Get user profile
+GET http://127.0.0.1:8000/api/profiles/
+Content-Type: application/json
+
+### user profile detail
+PUT http://127.0.0.1:8000/api/profiles/7aa45164-0ee6-4345-a39e-0575ae363a70/
+Content-Type: application/json
+
+{
+    "user": "7b625486-cacd-43e6-ba53-fd5a6e32f97d",
+    "first_name": "Souvagya",
+    "last_name": "Dey",
+    "address": "Kolkata, India",
+    "role": "doctor"
+}
+
+
+### user profile detail
+PATCH http://127.0.0.1:8000/api/profiles/
+Content-Type: application/json
+
+{
+    "role": "patient"
+}
+
+
+### Update user profile
+PATCH http://127.0.0.1:8000/api/profiles/f060e833-a7d1-46c7-bd22-b315485c52bd/
+Content-Type: application/json
+
+{
+  "address": "Chetla, India"
+}
+
+### Logout (clears cookies)
+POST http://127.0.0.1:8000/api/auth/logout/
+Content-Type: application/json
+
+
+
+### 
+GET http://127.0.0.1:8000/api/hospitalmanagement/hospitals/
+Content-Type: application/json
+
+{
+  "name": "MIOT International3",
+  "state": "Tamil Nadu1",
+  "district": "Chennai1",
+  "address": "4/112, Mount Poonamalle Road, Manapakkam, Chennai1",
+  "pincode": "600088",
+  "phone": "+91-44-2249-2000",
+  "email": "xyz@mail.com",
+  "website": "https://www.miotinternational.com",
+  "bed_count": 200,
+  "established_year": 1915,
+  "emergency_services": true,
+  "ambulance_service": true,
+  "blood_bank": true,
+  "pharmacy": true,
+  "cafeteria": true,
+  "parking_available": true
+}
+
+
+###
+POST http://127.0.0.1:8000/api/hospitalmanagement/hospitalreviews/
+Content-Type: application/json
+
+{
+  "hospital" : "f172e4fc-451d-43ab-9dda-4b85d08d23e8",
+  "rating" : 4, 
+  "comment" : "Excellent hospital with great facilities and staff."
+}
+
+
+
+###
+GET http://127.0.0.1:8000/api/doctorappointment/doctors/
+Content-Type: application/json
+
+{
+  "profile_id": "f060e833-a7d1-46c7-bd22-b315485c52bd",  
+  "hospital_id": "f172e4fc-451d-43ab-9dda-4b85d08d23e8",
+  "experience_years": 10,
+  "consultation_fee": 1500
+}
+
+
+###
+POST http://localhost:8000/api/doctorappointment/doctors_reviews/
+Content-Type: application/json
+
+
+{
+  "doctor": "",
+  "patient": "3d66006a-c08b-41ae-bbde-a4f7ff9630c8",
+  "rating": 4,
+  "comment": "great doctor with excellent knowledge and skills."
+}
+
+
+###
+POST http://127.0.0.1:8000/api/doctorappointment/appointments/
+Content-Type: application/json
+
+{
+  "doctor": "4ca43769-f986-4369-ac18-814d5d66a50f",
+  "patient": "229ed017-89f6-4736-95b0-0eadc2c327d3",
+  "reason": "Regular check-up"
+}
+
+
+
+###
+POST http://127.0.0.1:8000/api/products/productstore/
+Content-Type: application/json
+
+{
+  "name": "iPhone 14 Pro Max",
+  "price": "1099.99",
+  "manufacturer": "Apple",
+  "category": "equipment",
+  "product_data": {
+    "features": 
+    {
+      "camera": "48MP",
+      "battery": "4323mAh",
+      "display": "6.7-inch OLED"
+    }
+  },
+  "stock": 50
+}
+
+###
+POST http://127.0.0.1:8000/api/products/productreview/
+Content-Type: application/json
+
+{
+  "product": "98089a14-40de-44ca-83a5-4dee53862585",
+  "rating": 4,
+  "comment": "Good product, but a bit expensive."
+}
+
+
+###
+GET http://127.0.0.1:8000/api/orders/
+Content-Type: application/json
+
+{
+  "payment_method": "COD",
+  "shipping_address": "Mumbai, India",
+  "billing_address": "Mumbai, India",
+  "order_items": [
+    {
+      "product_id": "98089a14-40de-44ca-83a5-4dee53862585",
+      "quantity": 2
+    }
+  ] 
+}
+
+
+# ###
+# POST http://localhost:8000/api/orders/orderitem/
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2MDM1Njg3LCJpYXQiOjE3NTYwMzIwODcsImp0aSI6IjIyMGUyMDUyYTkwMTRhY2NhMTgyMzEwNWY3OWRjN2ZjIiwidXNlcl9pZCI6IjMifQ.nlcS1hXTsvAKO0XAkTX6wpQIA_N_tk7oiBhb_VkscaQ
+
+
+# {
+#   "order": "7b0fb392-184a-41f0-9479-932cdd03d07d",
+# }
+
+
+###
+POST http://localhost:8000/api/orders/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2NTYzNjkwLCJpYXQiOjE3NTY1NjAwOTAsImp0aSI6ImMyZDM4ZGM0MzM3YTRkMmVhOWQwZTY0NzAwNDA5NzM1IiwidXNlcl9pZCI6IjIifQ.7aNsgyhNkqvt7JHGfkZvLCbRKw-xGYQ_gm_tbwFnin8
+
+{
+  "payment_method": "UPI",
+  "shipping_address": "Kolkata, India",
+  "billing_address": "Kolkata, India",
+  "order_items": [
+    {
+      "product_id": "",
+      "quantity": 2
+    }
+  ] 
+}
+
+###
+POST http://localhost:8000/api/products/productreview/
+Content-Type: application/json
+
+{
+  "product": "bb82358d-777c-4c05-8281-8ef68ecd871c",
+  "user": 2,
+  "rating": 5,
+  "comment": "Great product!"
+}
+
+###
+POST http://localhost:8000/api/cart/carts/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2NTkxNDc2LCJpYXQiOjE3NTY1ODc4NzYsImp0aSI6ImNmZmUwZDJlNTFiYTQ4ZDFhOTE2MjgwMzNhMDg5YmI3IiwidXNlcl9pZCI6IjEifQ.m0d2-JAeReVn8ODgMaO6VpB-C8Oaf5a7Khp584Zcv9A
+Content-Type: application/json
+
+
+###
+GET http://localhost:8000/api/cart/cart-items/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzU2NTkxNDc2LCJpYXQiOjE3NTY1ODc4NzYsImp0aSI6ImNmZmUwZDJlNTFiYTQ4ZDFhOTE2MjgwMzNhMDg5YmI3IiwidXNlcl9pZCI6IjEifQ.m0d2-JAeReVn8ODgMaO6VpB-C8Oaf5a7Khp584Zcv9A
+Content-Type: application/json
+
+{
+  "product_id": "",
+  "quantity": 1
+}
+
+
+### Get all carts
+GET http://127.0.0.1:8000/api/cart/carts/
+Content-Type: application/json
+
+### Create cart
+POST http://127.0.0.1:8000/api/cart/carts/
+Content-Type: application/json
+
+
+### Get specific cart
+GET http://127.0.0.1:8000/api/cart/carts/{cart_id}/
+Content-Type: application/json
+
+### Update cart (PUT)
+PUT http://127.0.0.1:8000/api/cart/carts/{cart_id}/
+Content-Type: application/json
+
+### Delete cart
+DELETE http://127.0.0.1:8000/api/cart/carts/{cart_id}/
+Content-Type: application/json
+
+### Get all cart items
+GET http://127.0.0.1:8000/api/cart/cart-items/
+Content-Type: application/json
+{
+
+}
+
+### Create cart item
+POST http://127.0.0.1:8000/api/cart/cart-items/
+Content-Type: application/json
+
+{
+    "product_id": "{product_id}",
+    "quantity": 2
+}
+
+### Get specific cart item
+GET http://127.0.0.1:8000/api/cart/cart-items/{item_id}/
+Content-Type: application/json
+
+### Update cart item (PUT)
+PUT http://127.0.0.1:8000/api/cart/cart-items/{item_id}/
+Content-Type: application/json
+
+{
+    "product_id": "{product_id}",
+    "quantity": 5
+}
+
+### Update cart item (PATCH)
+PATCH http://127.0.0.1:8000/api/cart/cart-items/{item_id}/
+Content-Type: application/json
+
+{
+    "quantity": 3
+}
+
+### Delete cart item
+DELETE http://127.0.0.1:8000/api/cart/cart-items/{item_id}/
+Content-Type: application/json
