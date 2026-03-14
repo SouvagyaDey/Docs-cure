@@ -1,0 +1,296 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DOCKER_IMAGE: docscure-backend
+  REGISTRY: ghcr.io
+
+jobs:
+  # ── Lint & Test ────────────────────────────────────────────────
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: docs_cure_db
+          MYSQL_USER: docsuser
+          MYSQL_PASSWORD: docspass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --health-start-period=30s
+
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config
+
+      - name: Install Python dependencies
+        run: |
+          cd backend
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Django checks
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_DATABASE: docs_cure_db
+          MYSQL_USER: docsuser
+          MYSQL_PASSWORD: docspass
+          MONGODB_HOST: 127.0.0.1
+          MONGODB_PORT: 27017
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+        run: |
+          cd backend
+          python manage.py check
+          python manage.py migrate --noinput
+
+      - name: Run tests
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: 3306
+          MYSQL_DATABASE: docs_cure_db
+          MYSQL_USER: docsuser
+          MYSQL_PASSWORD: docspass
+          MONGODB_HOST: 127.0.0.1
+          MONGODB_PORT: 27017
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+        run: |
+          cd backend
+          python manage.py test --verbosity=2
+
+  # ── Build & Push Docker Image ─────────────────────────────────
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy (staging on develop, production on main) ───────────
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        env:
+          DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+          DEPLOY_USER: ${{ secrets.STAGING_USER }}
+          DEPLOY_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
+            cd /opt/docscure
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker compose exec backend python manage.py migrate --noinput
+            echo "Staging deployment complete"
+          EOF
+
+  deploy-production:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        env:
+          DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+          DEPLOY_USER: ${{ secrets.PRODUCTION_USER }}
+          DEPLOY_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "${DEPLOY_USER}@${DEPLOY_HOST}" << 'EOF'
+            cd /opt/docscure
+            docker compose pull
+            docker compose up -d --remove-orphans
+            docker compose exec backend python manage.py migrate --noinput
+            echo "Production deployment complete"
+          EOF
+
+  # ── Load Test (runs on main branch pushes) ────────────────────
+  load-test:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start application stack
+        run: docker compose up -d --build --wait
+
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend health..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/api/auth/health/ > /dev/null 2>&1; then
+              echo "Backend is healthy!"
+              break
+            fi
+            echo "Attempt $i/30 - waiting..."
+            sleep 5
+          done
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Locust
+        run: pip install locust
+
+      - name: Run load test (1000+ concurrent users)
+        run: |
+          cd loadtest
+          locust -f locustfile.py \
+            --headless \
+            --host=http://localhost:8000 \
+            --users 1100 \
+            --spawn-rate 50 \
+            --run-time 120s \
+            --csv=results \
+            --html=report.html \
+            2>&1 | tee loadtest_output.txt
+
+      - name: Display load test results
+        if: always()
+        run: |
+          echo "=== Load Test Summary ==="
+          if [ -f loadtest/results_stats.csv ]; then
+            cat loadtest/results_stats.csv
+          fi
+          echo ""
+          echo "=== Failure Summary ==="
+          if [ -f loadtest/results_failures.csv ]; then
+            cat loadtest/results_failures.csv
+          fi
+
+      - name: Upload load test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report
+          path: |
+            loadtest/report.html
+            loadtest/results_*.csv
+            loadtest/loadtest_output.txt
+          retention-days: 30
+
+      - name: Validate load test results
+        run: |
+          python3 -c "
+          import csv, sys
+          with open('loadtest/results_stats.csv') as f:
+              reader = csv.DictReader(f)
+              for row in reader:
+                  if row['Name'] == 'Aggregated':
+                      fail_ratio = float(row['Failure Count']) / max(float(row['Request Count']), 1)
+                      avg_time = float(row['Average Response Time'])
+                      p99 = float(row['99%'])
+                      print(f'Total Requests: {row[\"Request Count\"]}')
+                      print(f'Failure Ratio: {fail_ratio:.2%}')
+                      print(f'Avg Response Time: {avg_time:.0f}ms')
+                      print(f'P99 Response Time: {p99:.0f}ms')
+                      if fail_ratio > 0.05:
+                          print('FAIL: Error rate exceeds 5%')
+                          sys.exit(1)
+                      if p99 > 10000:
+                          print('FAIL: P99 latency exceeds 10s')
+                          sys.exit(1)
+                      print('PASS: Load test passed stability thresholds')
+          "
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v
